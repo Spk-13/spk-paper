@@ -25,7 +25,7 @@ public final class CaptureActivity extends Activity {
     private File pending;private JpegPdf pdf;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,20,16,16);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(16,20,16,16);
         root.setOnApplyWindowInsetsListener((v,i)->{v.setPadding(16+i.getSystemWindowInsetLeft(),20+i.getSystemWindowInsetTop(),16+i.getSystemWindowInsetRight(),16+i.getSystemWindowInsetBottom());return i;});
         status=new TextView(this);status.setTextSize(21);status.setText("పేపర్ సిద్ధం చేస్తున్నాం…\nPreparing today’s paper. Please keep this screen open.");root.addView(status);
         Button cancel=new Button(this);cancel.setText("రద్దు / Cancel");root.addView(cancel);cancel.setOnClickListener(v->fail("Preparation cancelled. Your saved paper is unchanged."));
