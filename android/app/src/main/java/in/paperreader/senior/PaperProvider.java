@@ -16,7 +16,7 @@ public final class PaperProvider extends ContentProvider {
     private File resolve(Uri uri)throws FileNotFoundException{
         if(!"content".equals(uri.getScheme()) || !(getContext().getPackageName()+".papers").equals(uri.getAuthority())
             || !java.util.Collections.singleton("version").containsAll(uri.getQueryParameterNames()) || uri.getFragment()!=null)throw new FileNotFoundException("Invalid paper URI");
-        if("/paper.pdf".equals(uri.getPath()))return new File(getContext().getFilesDir(),"paper.pdf");
+        if("/paper.pdf".equals(uri.getPath()))return IssueStore.current(getContext());
         if("/sample.pdf".equals(uri.getPath()))return new File(getContext().getCacheDir(),"sample.pdf");
         throw new FileNotFoundException("Unknown paper");
     }

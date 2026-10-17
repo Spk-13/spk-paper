@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
     private static final String DEFAULT_FEED="https://spk-13.github.io/spk-paper/latest.json";
     private static final long MAX_PDF=150L*1024*1024;
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); prefs=getSharedPreferences("paper",MODE_PRIVATE); home(); refreshToday(false);
+        super.onCreate(state); prefs=getSharedPreferences("paper",MODE_PRIVATE); IssueStore.prune(this); home();
     }
     private String today(){ return LocalDate.now(ZoneId.of("Asia/Kolkata")).toString(); }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -55,52 +55,28 @@ public class MainActivity extends Activity {
         TextView title=text("SPK Paper",36);title.setTypeface(null,Typeface.BOLD);content.addView(title);
         content.addView(text("ఈనాడు • గ్రేటర్ హైదరాబాద్\nEenadu • Greater Hyderabad",18));
         dateLabel=text("ఈ రోజు  ·  "+today(),22);content.addView(dateLabel);
-        status=text(prefs.getString("feed",DEFAULT_FEED).isEmpty()?"మొదటిసారి ఏర్పాటు చేయాలి\nOne-time setup is needed.":"ఈ రోజు పేపర్ కోసం బటన్ నొక్కండి\nTap below to check today’s paper.",20);content.addView(status);
+        status=text("ఈ రోజు పేపర్ కోసం బటన్ నొక్కండి\nTap below to prepare today’s paper on this phone.",20);content.addView(status);
         open=button("ఈ రోజు పేపర్ తెరవండి\nOpen today’s paper",true);content.addView(open);open.setOnClickListener(v->refreshToday(true));
         Button offline=button("సేవ్ అయిన పేపర్\nRead saved issue",false);content.addView(offline);offline.setOnClickListener(v->openCached());
-        if(prefs.getString("feed",DEFAULT_FEED).isEmpty()){
-            Button demo=button("నమూనా చూడండి\nOpen sample PDF",false);content.addView(demo);demo.setOnClickListener(v->sample());
-        }
-        TextView hint=text("పేపర్ PDF వ్యూయర్‌లో తెరుచుకుంటుంది.\nOpens with Google Drive or your PDF viewer.",17);content.addView(hint);
-        Button settings=button("ఏర్పాటు / Settings",false);content.addView(settings);settings.setOnClickListener(v->setup());
-    }
-    private void setup(){
-        EditText input=new EditText(this);input.setSingleLine(true);input.setText(prefs.getString("feed",DEFAULT_FEED));input.setHint("https://…/latest.json");input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("One-time paper feed setup").setMessage("A family member sets this once. Paste the HTTPS latest.json address from the daily publisher.").setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save",null).create();
-        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{safeUrl(input.getText().toString().trim());prefs.edit().putString("feed",input.getText().toString().trim()).apply();dialog.dismiss();home();}catch(Exception e){input.setError("Enter a valid HTTPS feed address");}}));dialog.show();
+        content.addView(text("Google Drive PDF viewerలో తెరుచుకుంటుంది.\nOnly the latest prepared issue is kept. Keep this app open while preparing.",17));
     }
     private static URL safeUrl(String address)throws Exception{URL u=new URL(address);if(!"https".equals(u.getProtocol())||u.getHost().isEmpty()||u.getUserInfo()!=null)throw new IOException("HTTPS address required");return u;}
     private void message(String s){if(!destroyed){status.setText(s);busy=false;open.setEnabled(true);}}
     private void refreshToday(boolean openViewer){
         if(busy)return;
-        String feed=prefs.getString("feed",DEFAULT_FEED);if(feed.isEmpty()){setup();return;}
-        busy=true;open.setEnabled(false);status.setText("పేపర్ సిద్ధం చేస్తున్నాం…\nChecking today’s issue…");int ticket=++generation;
-        worker.execute(()->{
-            File temp=new File(getCacheDir(),"incoming-"+java.util.UUID.randomUUID()+".pdf");
-            try{
-                URL endpoint=safeUrl(feed+(feed.contains("?")?"&":"?")+"t="+System.currentTimeMillis());
-                ByteArrayOutputStream meta=new ByteArrayOutputStream();fetch(endpoint,meta,65536);
-                JSONObject data=new JSONObject(meta.toString("UTF-8"));String date=data.getString("date");
-                if(!"GREATER HYDERABAD".equals(data.getString("edition")))throw new IOException("Wrong edition in feed");
-                if(!today().equals(date)){runOnUiThread(()->{if(ticket==generation)message("ఈ రోజు పేపర్ ఇంకా రాలేదు.\nToday’s issue is not available yet. Latest: "+date+". Please try again later.");});return;}
-                String hash=data.getString("sha256");if(!hash.matches("[0-9a-f]{64}"))throw new IOException("Invalid PDF checksum");
-                File cached=new File(getFilesDir(),"paper.pdf");
-                if(!(cached.isFile() && date.equals(prefs.getString("date","")) && hash.equals(sha(cached)))){
-                    URL pdf=safeUrl(new URL(safeUrl(feed),data.getString("pdf")).toString());
-                    try(FileOutputStream out=new FileOutputStream(temp)){fetch(pdf,out,MAX_PDF);}
-                    if(!hash.equals(sha(temp)))throw new IOException("Paper was incomplete; please retry");
-                    try(PdfRenderer check=new PdfRenderer(ParcelFileDescriptor.open(temp,ParcelFileDescriptor.MODE_READ_ONLY))){if(check.getPageCount()!=data.getInt("pages")||check.getPageCount()<1)throw new IOException("Page count mismatch");}
-                    java.nio.file.Files.move(temp.toPath(),cached.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    prefs.edit().putString("date",date).putString("sha",hash).apply();
-                }
-                if(openViewer) launchPdf(cached,date,ticket);
-                else runOnUiThread(()->{if(ticket==generation)message("ఈ రోజు పేపర్ సిద్ధంగా ఉంది\nToday’s paper is ready • "+date);});
-            }catch(Exception e){runOnUiThread(()->{if(ticket==generation)message("పేపర్ తెరవలేకపోయాం. మళ్లీ ప్రయత్నించండి.\nCould not load the paper. Check internet or feed setup, then retry.\n"+e.getMessage());});}
-            finally{temp.delete();}
-        });
+        File cached=IssueStore.current(this);
+        if(cached.isFile() && today().equals(prefs.getString("date",""))){startFile(cached,today());return;}
+        startActivityForResult(new Intent(this,CaptureActivity.class),100);
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data){
+        super.onActivityResult(request,result,data);
+        if(request==100){
+            if(result==RESULT_OK)startFile(IssueStore.current(this),prefs.getString("date",""));
+            else message(data==null?"Preparation cancelled. Saved paper is unchanged.":data.getStringExtra("error"));
+        }
     }
     private void openCached(){
-        if(busy)return;File pdf=new File(getFilesDir(),"paper.pdf");String date=prefs.getString("date","");
+        if(busy)return;File pdf=IssueStore.current(this);String date=prefs.getString("date","");
         if(!pdf.isFile()){message("ఇంకా పేపర్ సేవ్ కాలేదు.\nOpen today’s paper online first.");return;}
         String label=date+" • Saved copy";
         if(!date.equals(today()))new AlertDialog.Builder(this).setTitle("ఇది పాత పేపర్ / Older issue").setMessage("Saved issue: "+date+". This is not today’s newspaper.").setPositiveButton("Open saved issue",(d,w)->startFile(pdf,label)).setNegativeButton("Cancel",null).show();

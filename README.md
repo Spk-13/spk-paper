@@ -1,32 +1,17 @@
-# SPK Paper — daily Greater Hyderabad reader
+# SPK Paper 0.4
 
-**Integration status (17 October 2026):** APK v0.3 builds and passes Android lint. Publisher unit tests pass, but the official homepage returns HTTP 403 Forbidden from GitHub Actions. No live newspaper has been published. Daily delivery is blocked until the source permits server access. No device test has been completed.
+Phone-based Eenadu Greater Hyderabad PDF preparation. Tap **Open today’s paper** to load the official reader on the phone, select today’s edition, prepare all its page images as a PDF, and open Google Drive’s PDF viewer (another PDF app is offered if Drive cannot handle it). No GitHub feed URL is required.
 
-Feed address: `https://spk-13.github.io/spk-paper/latest.json`
+Keep the app open while preparing. Internet is required for a new issue. Once prepared, the saved issue works offline. Only one completed issue is retained: a new PDF is checked for page count and readability, installed, and the previous issue removed. Failed preparation keeps the previous issue with its original date. Temporary preparation data is removed on cancellation; Android may retain interrupted cache data until the next cleanup. External viewer caches are controlled by that viewer, not SPK Paper.
 
-Version 0.3 checks the feed and saves today's issue when the app starts. Tap **Open today's paper** to read it in Google Drive or another installed PDF reader. Each issue is checked for the India date, Greater Hyderabad edition, checksum and page count. The feed address is included in the app.
+The app follows the visible official reader and public Skip registration option. Sign-in must be completed by the user if required. HTTP errors, access restrictions, changed selectors, wrong dates or duplicate images stop preparation. Availability on a phone connection must be tested; successful build or fixture tests do not prove live newspaper access. No proxy or restriction bypass is included.
 
-The daily publisher runs at 07:17, 08:17, 09:17, 10:17 and 11:17 India time. A push changing the publisher also starts a run. GitHub schedules can be delayed and can stop after repository inactivity; check Actions if updates stop. Only successful generation is deployed. Failed runs leave the previously published issue available, and the app refuses to label it today's paper.
+## Install
 
-GitHub Pages must use **GitHub Actions** as its source. This repository and its deployed PDFs are public. Publish only material you are authorized to redistribute. This independent app is not affiliated with Eenadu.
+Install the APK from the Build Android APK workflow artifact. Uninstall an earlier debug build if Android reports a signing conflict. Only an app upgrade needs installation; daily papers do not. Android 8 or newer is required.
 
-## Installation
+## Validation
 
-Get the APK from the **Build Android APK** workflow artifact. Cloud builds use a different debug signing key from the earlier testing APK: uninstall the earlier test app before installing this build if Android reports a signature conflict. App settings and saved issue are removed by uninstalling. A stable private release signing key is required for future in-place app version upgrades; daily newspaper changes do not require APK upgrades.
+CI builds the APK, runs lint and Android emulator instrumentation tests: actual PDF rendering, complete-issue replacement, rejection of incomplete replacement, and WebView reader selection/date checks using a controlled fixture. The live publisher and Google Drive installation are not part of the fixture tests. See Actions for results.
 
-## Build and checks
-
-Open `android` in Android Studio, or run `android/gradlew -p android assembleDebug lintDebug` with JDK 17 and Android SDK 35. The GitHub build workflow runs these checks and uploads an APK artifact.
-
-```sh
-pip install -r publisher/requirements.txt
-python -m playwright install --with-deps chromium
-python -m unittest discover -s publisher -p 'test_*.py'
-python publisher/publish.py
-```
-
-`publisher/source.py` uses the site's public edition selection and Skip registration route. It creates a PDF from the visible high-resolution page images. It stops on access restrictions, unexpected dates, duplicate pages or invalid images. The full page count comes from the current issue; it is not fixed to yesterday's count.
-
-`publisher/publish.py` writes a dated PDF and a `latest.json` manifest containing date, edition, relative PDF path, page count and SHA-256. Android fetches over HTTPS and keeps the current PDF in private storage, then grants the external PDF viewer temporary read-only access. Newspaper pages are images, so text selection and text-to-speech are not provided.
-
-See Actions for the authoritative deployment and build results. A schedule configured in source is not proof of a successful deployment.
+The old server publisher remains manual-only because Eenadu returned HTTP 403 to GitHub Actions. It is not used by this APK.

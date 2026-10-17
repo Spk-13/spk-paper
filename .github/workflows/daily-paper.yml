@@ -1,12 +1,7 @@
 name: Daily Greater Hyderabad paper
 on:
-  push:
-    branches: [main]
-    paths: ['publisher/**', '.github/workflows/daily-paper.yml']
   workflow_dispatch:
-  schedule:
-    # 07:17, 08:17, 09:17, 10:17, 11:17 IST. Later runs handle late editions.
-    - cron: '47 1-5 * * *'
+# Legacy publisher is manual-only. Version 0.4 prepares the issue on the phone.
 permissions:
   contents: read
   pages: write
