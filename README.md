@@ -1,5 +1,7 @@
 # SPK Paper — daily Greater Hyderabad reader
 
+**Integration status (17 October 2026):** APK v0.3 builds and passes Android lint. Publisher unit tests pass, but the official homepage returns HTTP 403 Forbidden from GitHub Actions. No live newspaper has been published. Daily delivery is blocked until the source permits server access. No device test has been completed.
+
 Feed address: `https://spk-13.github.io/spk-paper/latest.json`
 
 Version 0.3 checks the feed and saves today's issue when the app starts. Tap **Open today's paper** to read it in Google Drive or another installed PDF reader. Each issue is checked for the India date, Greater Hyderabad edition, checksum and page count. The feed address is included in the app.
