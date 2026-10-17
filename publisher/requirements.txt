@@ -1,4 +1,4 @@
 Pillow>=10,<12
-playwright==1.51.1
+playwright==1.51.0
 reportlab>=4,<5
 pypdf>=5,<7
