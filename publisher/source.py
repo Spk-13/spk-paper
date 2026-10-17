@@ -69,8 +69,13 @@ def create_issue_pdf(now: datetime, output_path: Path) -> Path:
                 context = browser.new_context(accept_downloads=True)
                 page = context.new_page()
                 log.info("Opening official viewer for %s", issue_date)
-                page.goto(SOURCE_URL, wait_until="domcontentloaded", timeout=60000)
-                page.locator(".ep_ed_pg").first.wait_for(state="visible", timeout=30000)
+                response = page.goto(SOURCE_URL, wait_until="domcontentloaded", timeout=60000)
+                log.info("Homepage HTTP %s, title %r, URL %s", response.status if response else None, page.title(), page.url)
+                try:
+                    page.locator(".ep_ed_pg").first.wait_for(state="visible", timeout=30000)
+                except PlaywrightTimeoutError:
+                    log.error("Homepage text: %s", page.locator("body").inner_text()[:3000])
+                    raise
 
                 cards = page.locator(".ep_ed_pg")
                 chosen = None
