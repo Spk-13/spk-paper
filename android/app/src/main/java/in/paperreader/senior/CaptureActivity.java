@@ -34,7 +34,7 @@ public final class CaptureActivity extends Activity {
         WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
-        agent=settings.getUserAgentString();CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
+        agent=settings.getUserAgentString();android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
         issue=LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
         try(InputStream in=getAssets().open("capture.js")){ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)bytes.write(b,0,n);script=bytes.toString("UTF-8");}
         catch(Exception e){fail("Reader setup failed: "+e.getMessage());return;}
@@ -64,7 +64,7 @@ public final class CaptureActivity extends Activity {
                         int count=result.getInt("count");if(count<1||count>120||(total!=0&&total!=count))throw new IOException("Unexpected page count");total=count;
                         String url=result.getString("url");if(!seen.add(url))throw new IOException("Repeated page; incomplete paper was not saved");
                         processing=true;status.setText("పేజీ "+(index+1)+" / "+total+"\nPreparing page "+(index+1)+" of "+total);
-                        String cookie=CookieManager.getInstance().getCookie(url);worker.execute(()->capture(url,cookie));return;
+                        String cookie=android.webkit.CookieManager.getInstance().getCookie(url);worker.execute(()->capture(url,cookie));return;
                     }
                     if("login".equals(state))status.setText("Official reader: complete any required sign-in below.\nThe app cannot skip access restrictions.");
                     handler.postDelayed(this::poll,1000);

@@ -15,7 +15,7 @@ final class JpegPdf implements Closeable {
     private void write(String s)throws IOException{out.write(s.getBytes(StandardCharsets.ISO_8859_1));}
     private void object(int id)throws IOException{offsets.put(id,out.getFilePointer());write(id+" 0 obj\n");}
     void add(byte[] jpeg)throws IOException{
-        if(jpeg.length<4||(jpeg[0]&255)!=255||(jpeg[1]&255)!=216)throw new IOException("Not a JPEG page");
+        if(jpeg.length<4||(jpeg[0]&255)!=255||(jpeg[1]&255)!=216||(jpeg[jpeg.length-2]&255)!=255||(jpeg[jpeg.length-1]&255)!=217)throw new IOException("Not a JPEG page");
         BitmapFactory.Options opts=new BitmapFactory.Options();opts.inJustDecodeBounds=true;BitmapFactory.decodeByteArray(jpeg,0,jpeg.length,opts);
         int w=opts.outWidth,h=opts.outHeight;
         if(w<1000||h<1000||w>12000||h>16000)throw new IOException("Invalid page dimensions");

@@ -29,10 +29,11 @@ public class MainActivity extends Activity {
     private int generation;
     private boolean busy, destroyed;
     private final int green=Color.rgb(21,92,73), ink=Color.rgb(25,43,36);
-    private static final String DEFAULT_FEED="https://spk-13.github.io/spk-paper/latest.json";
-    private static final long MAX_PDF=150L*1024*1024;
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); prefs=getSharedPreferences("paper",MODE_PRIVATE); IssueStore.prune(this); home();
+        super.onCreate(state); prefs=getSharedPreferences("paper",MODE_PRIVATE); IssueStore.prune(this);
+        File[] leftovers=getCacheDir().listFiles();
+        if(leftovers!=null)for(File f:leftovers)if(f.getName().matches("(capture|incoming)-[a-f0-9-]+\\.pdf"))f.delete();
+        home();
     }
     private String today(){ return LocalDate.now(ZoneId.of("Asia/Kolkata")).toString(); }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -60,7 +61,6 @@ public class MainActivity extends Activity {
         Button offline=button("సేవ్ అయిన పేపర్\nRead saved issue",false);content.addView(offline);offline.setOnClickListener(v->openCached());
         content.addView(text("Google Drive PDF viewerలో తెరుచుకుంటుంది.\nOnly the latest prepared issue is kept. Keep this app open while preparing.",17));
     }
-    private static URL safeUrl(String address)throws Exception{URL u=new URL(address);if(!"https".equals(u.getProtocol())||u.getHost().isEmpty()||u.getUserInfo()!=null)throw new IOException("HTTPS address required");return u;}
     private void message(String s){if(!destroyed){status.setText(s);busy=false;open.setEnabled(true);}}
     private void refreshToday(boolean openViewer){
         if(busy)return;
@@ -81,10 +81,6 @@ public class MainActivity extends Activity {
         String label=date+" • Saved copy";
         if(!date.equals(today()))new AlertDialog.Builder(this).setTitle("ఇది పాత పేపర్ / Older issue").setMessage("Saved issue: "+date+". This is not today’s newspaper.").setPositiveButton("Open saved issue",(d,w)->startFile(pdf,label)).setNegativeButton("Cancel",null).show();
         else startFile(pdf,label);
-    }
-    private void sample(){
-        if(busy)return;busy=true;int ticket=++generation;
-        worker.execute(()->{try{File f=new File(getCacheDir(),"sample.pdf");try(InputStream in=getAssets().open("sample.pdf");OutputStream out=new FileOutputStream(f)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}launchPdf(f,"SAMPLE • నమూనా మాత్రమే",ticket);}catch(Exception e){runOnUiThread(()->message("Sample could not open"));}});
     }
     private void startFile(File file,String label){busy=true;int ticket=++generation;worker.execute(()->{try{launchPdf(file,label,ticket);}catch(Exception e){runOnUiThread(()->message("Saved paper could not open. Please load today’s paper again."));}});}
     private void launchPdf(File file,String label,int ticket)throws Exception{
@@ -117,17 +113,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-    private static void fetch(URL url,OutputStream out,long limit)throws Exception{
-        URL current=url;
-        for(int redirect=0;redirect<5;redirect++){
-            HttpURLConnection c=(HttpURLConnection)current.openConnection();c.setConnectTimeout(20000);c.setReadTimeout(60000);c.setUseCaches(false);c.setInstanceFollowRedirects(false);c.setRequestProperty("Cache-Control","no-cache");
-            try{int code=c.getResponseCode();if(code>=300&&code<400){String location=c.getHeaderField("Location");if(location==null)throw new IOException("Missing redirect");current=safeUrl(new URL(current,location).toString());continue;}if(code!=200)throw new IOException("Server returned "+code);
-                if(c.getContentLengthLong()>limit)throw new IOException("File too large");
-                try(InputStream in=c.getInputStream()){byte[] b=new byte[16384];int n;long total=0;while((n=in.read(b))!=-1){total+=n;if(total>limit)throw new IOException("File too large");out.write(b,0,n);}}return;
-            }finally{c.disconnect();}
-        }throw new IOException("Too many redirects");
-    }
-    private static String sha(File file)throws Exception{MessageDigest md=MessageDigest.getInstance("SHA-256");try(InputStream in=new FileInputStream(file)){byte[] b=new byte[16384];int n;while((n=in.read(b))!=-1)md.update(b,0,n);}StringBuilder s=new StringBuilder();for(byte b:md.digest())s.append(String.format(Locale.ROOT,"%02x",b));return s.toString();}
     @Override protected void onResume(){super.onResume();if(dateLabel!=null)dateLabel.setText("ఈ రోజు  ·  "+today());}
     @Override protected void onDestroy(){destroyed=true;generation++;worker.shutdown();super.onDestroy();}
 }

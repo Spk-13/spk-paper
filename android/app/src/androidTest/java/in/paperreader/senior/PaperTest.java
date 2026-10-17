@@ -23,6 +23,18 @@ public class PaperTest {
         File f=File.createTempFile("test-paper",".pdf",context().getCacheDir());
         try(JpegPdf p=new JpegPdf(f)){byte[] image=jpeg();for(int i=0;i<count;i++)p.add(image);p.finish();}return f;
     }
+    @Test public void homeStartsWithoutFeedSetup()throws Exception{
+        android.app.Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        MainActivity activity=(MainActivity)instrumentation.startActivitySync(new android.content.Intent(context(),MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        assertNotNull(activity);instrumentation.runOnMainSync(activity::finish);
+    }
+    @Test public void truncatedJpegIsRejected()throws Exception{
+        File file=File.createTempFile("bad-image",".pdf",context().getCacheDir());
+        try(JpegPdf pdf=new JpegPdf(file)){
+            byte[] bytes=jpeg();
+            try{pdf.add(java.util.Arrays.copyOf(bytes,bytes.length-10));fail("Truncated image accepted");}catch(IOException expected){}
+        }finally{file.delete();}
+    }
     @Test public void pdfRendersAllPages()throws Exception{
         File f=make(3);
         try(PdfRenderer reader=new PdfRenderer(ParcelFileDescriptor.open(f,ParcelFileDescriptor.MODE_READ_ONLY))){
