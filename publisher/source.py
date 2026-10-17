@@ -71,6 +71,8 @@ def create_issue_pdf(now: datetime, output_path: Path) -> Path:
                 log.info("Opening official viewer for %s", issue_date)
                 response = page.goto(SOURCE_URL, wait_until="domcontentloaded", timeout=60000)
                 log.info("Homepage HTTP %s, title %r, URL %s", response.status if response else None, page.title(), page.url)
+                if response is None or not response.ok:
+                    raise RuntimeError(f"Official viewer denied or failed the request (HTTP {response.status if response else 'unknown'}); no issue published")
                 try:
                     page.locator(".ep_ed_pg").first.wait_for(state="visible", timeout=30000)
                 except PlaywrightTimeoutError:
