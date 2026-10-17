@@ -1,0 +1,39 @@
+name: Daily Greater Hyderabad paper
+on:
+  push:
+    branches: [main]
+    paths: ['publisher/**', '.github/workflows/daily-paper.yml']
+  workflow_dispatch:
+  schedule:
+    # 07:17, 08:17, 09:17, 10:17, 11:17 IST. Later runs handle late editions.
+    - cron: '47 1-5 * * *'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: daily-paper
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r publisher/requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: python -m unittest discover -s publisher -p 'test_*.py'
+      - run: python -u publisher/publish.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Publish only the completed issue
+        id: deployment
+        uses: actions/deploy-pages@v4
