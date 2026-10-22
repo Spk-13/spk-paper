@@ -1,0 +1,28 @@
+name: Check and download TradingRef Greater Hyderabad
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'publisher/tradingref_download.py'
+      - '.github/workflows/tradingref.yml'
+permissions:
+  contents: read
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.51.0 'pypdf>=5,<7'
+      - run: python -m playwright install --with-deps chromium
+      - run: python -u publisher/tradingref_download.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TradingRef-result
+          path: tradingref-output/
+          retention-days: 7
