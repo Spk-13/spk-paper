@@ -17,6 +17,10 @@ try:
         page = browser.new_page(accept_downloads=True)
         response = page.goto(report["source"], wait_until="domcontentloaded", timeout=60000)
         report["http_status"] = response.status if response else None
+        if response is not None and response.status >= 400:
+            report["error_page"] = (response.text())[:1500]
+            report["response_server"] = response.headers.get("server", "")
+            print(json.dumps(report), flush=True)
         if response is None or response.status >= 400:
             raise RuntimeError(f"TradingRef homepage returned HTTP {report['http_status']}")
         page.locator("#datePicker").click()
